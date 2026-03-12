@@ -248,10 +248,21 @@ function initCharts() {
 function createBarChart(canvasId, color, plugin) {
     return new Chart(document.getElementById(canvasId), {
         type: 'bar',
-        data: { labels: [], datasets: [{ data: [], _raw: [], backgroundColor: color, borderRadius: 4 }] },
+        data: { labels: [], datasets: [{ 
+            data: [], 
+            _raw: [], 
+            backgroundColor: color, 
+            borderRadius: 6,
+            barPercentage: 0.8,      // Aumenta a espessura da barra no slot disponível
+            categoryPercentage: 0.9  // Reduz o espaço entre as categorias
+        }] },
         options: {
-            indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 80 } },
-            scales: { x: { grid: { color: gridColor }, max: 100 }, y: { grid: { display: false } } },
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
+            layout: { padding: { right: 80, top: 10, bottom: 10 } },
+            scales: { 
+                x: { grid: { color: gridColor }, max: 100 }, 
+                y: { grid: { display: false }, ticks: { padding: 10 } } 
+            },
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(2)}% (${ctx.dataset._raw[ctx.dataIndex].toLocaleString('pt-BR')})` } } }
         },
         plugins: [plugin]
