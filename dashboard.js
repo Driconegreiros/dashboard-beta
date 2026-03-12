@@ -12,20 +12,46 @@ const originalColorsDoughnut = [
     '#ef4444', '#14b8a6', '#6366f1', '#84cc16', '#a855f7', '#f43f5e',
     '#06b6d4' // Nova cor (Cyan) para evitar repetição entre PA e CPRAC
 ];
-const gridColor = 'rgba(255, 255, 255, 0.05)';
+let gridColor = 'rgba(255, 255, 255, 0.05)';
 
 // Configurações Globais do Chart.js
-Chart.defaults.color = 'rgba(255, 255, 255, 0.6)';
-Chart.defaults.font.family = "'Inter', sans-serif";
-Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-Chart.defaults.plugins.tooltip.titleColor = '#fff';
-Chart.defaults.plugins.tooltip.padding = 10;
-Chart.defaults.plugins.tooltip.cornerRadius = 8;
+function updateChartDefaults() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#FFFFFF' : '#000000'; // Pure white or pure black for maximum contrast
+    const tooltipBg = isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)';
+    const tooltipColor = isDark ? '#FFFFFF' : '#000000';
+
+    Chart.defaults.color = textColor;
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.plugins.tooltip.backgroundColor = tooltipBg;
+    Chart.defaults.plugins.tooltip.titleColor = tooltipColor;
+    Chart.defaults.plugins.tooltip.bodyColor = tooltipColor;
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    Chart.defaults.plugins.tooltip.borderColor = 'rgba(0,0,0,0.1)';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+
+    // Atualizar cores de grade e eixos (ticks), e redesenhar TODOS os gráficos
+    gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.05)';
+    [evolucaoChart, classesChart, assuntosChart, especializadasChart].forEach(chart => {
+        if (!chart) return;
+        
+        if (chart.options.scales) {
+            Object.values(chart.options.scales).forEach(scale => {
+                if (scale.grid) scale.grid.color = gridColor;
+                if (scale.ticks) scale.ticks.color = textColor; // Garante que labels dos eixos mudem de cor
+            });
+        }
+        chart.update(); // Sempre atualizar para refletir mudanças globais e de plugins
+    });
+}
 
 /**
  * Inicializa o Dashboard carregando os dados externos
  */
 async function initDashboard() {
+    setupTheme(); // Configurar tema ANTES de qualquer coisa para evitar flicker e garantir elementos
+    
     try {
         const response = await fetch('data.json');
         rawData = await response.json();
@@ -38,11 +64,53 @@ async function initDashboard() {
         // Event Listeners
         document.getElementById('year-start').addEventListener('input', handleYearSlider);
         document.getElementById('year-end').addEventListener('input', handleYearSlider);
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
         
     } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
         document.body.innerHTML += `<div class="fixed inset-0 flex items-center justify-center bg-black/80 z-50 text-red-500 font-bold p-10 text-center">Erro crítico ao carregar dados (data.json). Verifique o console.</div>`;
     }
+}
+
+/**
+ * Lógica de Troca de Tema
+ */
+function setupTheme() {
+    const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+    const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+    // Mudar os ícones com base no estado atual
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        // Se desejar que o padrão seja noturno mesmo sem nada salvo, mude esta lógica.
+        // O usuário pediu Diurno como padrão.
+    }
+
+    // Como o padrão deve ser diurno, só aplicamos dark se houver preferência explícita
+    if (localStorage.getItem('color-theme') === 'dark') {
+        document.documentElement.classList.add('dark');
+        themeToggleLightIcon.classList.remove('hidden');
+    } else {
+        document.documentElement.classList.remove('dark');
+        themeToggleDarkIcon.classList.remove('hidden');
+    }
+    updateChartDefaults();
+}
+
+function toggleTheme() {
+    const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+    const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+    themeToggleDarkIcon.classList.toggle('hidden');
+    themeToggleLightIcon.classList.toggle('hidden');
+
+    if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('color-theme', 'light');
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('color-theme', 'dark');
+    }
+    updateChartDefaults();
 }
 
 /**
@@ -72,7 +140,7 @@ function setupYearsSlider() {
  */
 function populateSidebar() {
     const sidebarLista = document.getElementById('sidebar-especializadas');
-    const clsActive = 'w-full text-left px-4 py-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-white border border-purple-500/50 transition-all text-sm font-semibold shadow-[0_0_15px_rgba(168,85,247,0.2)]';
+    const clsActive = 'active w-full text-left px-4 py-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-white border border-purple-500/50 transition-all text-sm font-semibold shadow-[0_0_15px_rgba(168,85,247,0.2)]';
     const clsInactive = 'w-full text-left px-4 py-3 rounded-lg text-white/60 hover:bg-white/5 hover:text-white transition-all text-sm font-medium border border-transparent';
 
     sidebarLista.innerHTML = ''; // Limpar antes
@@ -117,13 +185,16 @@ function initCharts() {
         id: 'barLabels',
         afterDatasetsDraw(chart) {
             const { ctx } = chart;
+            const isDark = document.documentElement.classList.contains('dark');
+            const labelColor = isDark ? '#FFFFFF' : '#000000'; // Branco no noturno, Preto no diurno
+            
             chart.data.datasets.forEach((dataset, i) => {
                 const meta = chart.getDatasetMeta(i);
                 meta.data.forEach((element, index) => {
                     const val = dataset._raw[index];
                     if (val) {
                         ctx.save();
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        ctx.fillStyle = labelColor;
                         ctx.font = "bold 11px 'Inter', sans-serif";
                         ctx.textAlign = 'left';
                         ctx.textBaseline = 'middle';

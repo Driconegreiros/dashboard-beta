@@ -1,11 +1,42 @@
+:root {
+    --bg-color: #f8fafc;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --panel-bg: rgba(255, 255, 255, 0.8);
+    --panel-border: rgba(15, 23, 42, 0.08);
+    --orb-1-color: rgba(13, 148, 136, 0.08);
+    --orb-2-color: rgba(16, 185, 129, 0.05);
+    --grid-line: rgba(15, 23, 42, 0.04);
+    --slider-track: rgba(15, 23, 42, 0.06);
+    --thumb-bg: #0f172a;
+    --scrollbar-track: rgba(15, 23, 42, 0.02);
+    --scrollbar-thumb: rgba(15, 23, 42, 0.1);
+}
+
+.dark {
+    --bg-color: #0f172a; /* Slate 900 for a more premium dark mode than pure black */
+    --text-primary: #f8fafc;
+    --text-secondary: rgba(248, 250, 252, 0.6);
+    --panel-bg: rgba(30, 41, 59, 0.5);
+    --panel-border: rgba(255, 255, 255, 0.06);
+    --orb-1-color: rgba(132, 0, 230, 0.15);
+    --orb-2-color: rgba(225, 37, 244, 0.1);
+    --grid-line: rgba(255, 255, 255, 0.05);
+    --slider-track: rgba(255, 255, 255, 0.1);
+    --thumb-bg: #fff;
+    --scrollbar-track: rgba(255, 255, 255, 0.05);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+}
+
 body {
-    background-color: #111;
-    color: #fff;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
     font-family: 'Inter', ui-sans-serif, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
     min-height: 100vh;
     overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Background Orbs */
@@ -13,51 +44,56 @@ body {
     position: fixed;
     top: -100px;
     left: -100px;
-    width: 400px;
-    height: 400px;
-    background: rgba(132, 0, 230, 0.15);
+    width: 450px;
+    height: 450px;
+    background: var(--orb-1-color);
     filter: blur(80px);
     border-radius: 50%;
     z-index: -1;
+    transition: background 0.3s ease;
 }
 
 .orb-2 {
     position: fixed;
     bottom: -150px;
     right: -50px;
-    width: 500px;
-    height: 500px;
-    background: rgba(225, 37, 244, 0.1);
+    width: 550px;
+    height: 550px;
+    background: var(--orb-2-color);
     filter: blur(100px);
     border-radius: 50%;
     z-index: -1;
+    transition: background 0.3s ease;
 }
 
 .glass-panel {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
     border-radius: 12px;
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .card-title {
     font-size: 14px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    color: var(--text-secondary);
     margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .card-value {
     font-size: 28px;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .range-slider {
     position: relative;
     width: 100%;
     height: 6px;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--slider-track);
     border-radius: 4px;
     margin-top: 1rem;
 }
@@ -67,7 +103,7 @@ body {
     height: 100%;
     left: 0%;
     right: 0%;
-    background: linear-gradient(to right, #a855f7, #ec4899);
+    background: linear-gradient(to right, #8b5cf6, #ec4899);
     border-radius: 4px;
 }
 
@@ -79,19 +115,22 @@ body {
     background: none;
     pointer-events: none;
     -webkit-appearance: none;
+    appearance: none;
     outline: none;
     margin: 0;
 }
 
 .range-slider input[type="range"]::-webkit-slider-thumb {
-    height: 16px;
-    width: 16px;
+    height: 18px;
+    width: 18px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--thumb-bg);
     pointer-events: auto;
     -webkit-appearance: none;
+    appearance: none;
     cursor: pointer;
-    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 2px solid #fff;
 }
 
 /* Scrollbar Customization */
@@ -99,12 +138,73 @@ body {
     width: 6px;
 }
 ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--scrollbar-thumb);
+    opacity: 0.8;
 }
+
+/* Theme Toggle Button Styles */
+#theme-toggle {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 50;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#theme-toggle:hover {
+    transform: scale(1.1);
+}
+
+/* Override utility classes that are specifically white/black for the other mode */
+.dark .text-white\/50 { color: rgba(255, 255, 255, 0.4) !important; }
+.text-white\/50 { color: rgba(15, 23, 42, 0.5) !important; }
+
+.dark .text-white\/90 { color: rgba(255, 255, 255, 0.9) !important; }
+.text-white\/90 { color: rgba(15, 23, 42, 0.9) !important; }
+
+.dark .text-white { color: #fff !important; }
+.text-white { color: #0f172a !important; }
+
+.dark .text-white\/60 { color: rgba(255, 255, 255, 0.6) !important; }
+.text-white\/60 { color: rgba(15, 23, 42, 0.6) !important; }
+
+.dark .text-white\/20 { color: rgba(255, 255, 255, 0.2) !important; }
+.text-white\/20 { color: rgba(15, 23, 42, 0.2) !important; }
+
+.dark .border-white\/10 { border-color: rgba(255, 255, 255, 0.1) !important; }
+.border-white\/10 { border-color: rgba(15, 23, 42, 0.1) !important; }
+
+.dark .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05) !important; }
+.bg-white\/5 { background-color: rgba(15, 23, 42, 0.05) !important; }
+
+.dark .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1) !important; }
+.bg-white\/10 { background-color: rgba(15, 23, 42, 0.05) !important; }
+
+/* Inverter filtros e transições suaves */
+#sidebar-especializadas button.active {
+    background: linear-gradient(to right, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.dark #sidebar-especializadas button.active {
+    background: linear-gradient(to right, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.2));
+    border-color: rgba(168, 85, 247, 0.5);
+}
+
