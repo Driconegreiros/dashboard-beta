@@ -9,7 +9,8 @@ let currentEspecializada = 'Todas';
 // Cores globais do Design System
 const originalColorsDoughnut = [
     '#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b',
-    '#ef4444', '#14b8a6', '#6366f1', '#84cc16', '#a855f7', '#f43f5e'
+    '#ef4444', '#14b8a6', '#6366f1', '#84cc16', '#a855f7', '#f43f5e',
+    '#06b6d4' // Nova cor (Cyan) para evitar repetição entre PA e CPRAC
 ];
 const gridColor = 'rgba(255, 255, 255, 0.05)';
 
@@ -143,8 +144,33 @@ function initCharts() {
     // 4. Especializadas (Doughnut)
     especializadasChart = new Chart(document.getElementById('chartEspecializadas'), {
         type: 'doughnut',
-        data: { labels: Object.keys(rawData.especializadas_totals), datasets: [{ data: Object.values(rawData.especializadas_totals), backgroundColor: originalColorsDoughnut, borderWidth: 0 }] },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { padding: 20, usePointStyle: true } } } }
+        data: { 
+            labels: Object.keys(rawData.especializadas_totals), 
+            datasets: [{ 
+                data: Object.values(rawData.especializadas_totals), 
+                backgroundColor: originalColorsDoughnut, 
+                borderWidth: 0 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            cutout: '50%', // Preenche mais a circunferência reduzindo o buraco central
+            plugins: { 
+                legend: { position: 'right', labels: { padding: 20, usePointStyle: true } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1) + '%';
+                            return `${label}: ${percentage} (${value.toLocaleString('pt-BR')})`;
+                        }
+                    }
+                }
+            } 
+        }
     });
 }
 
