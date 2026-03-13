@@ -43,7 +43,16 @@
                 </div>
             </div>
             
-            <p class="text-white/50 text-xs mt-6 mb-2 uppercase tracking-wider font-semibold">Especializada</p>
+            <!-- Dimension Selector (Visible in Consultivo) -->
+            <div id="sidebar-dimension-selector" class="mt-4 hidden animate-in fade-in duration-500">
+                <p class="text-white/50 text-[10px] mb-2 uppercase tracking-[0.2em] font-bold">Filtrar por:</p>
+                <div class="grid grid-cols-2 gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                    <button id="dim-btn-1" class="text-[10px] py-1.5 rounded-md bg-purple-500/20 text-white border border-purple-500/30 font-bold">Origem</button>
+                    <button id="dim-btn-2" class="text-[10px] py-1.5 rounded-md text-white/40 hover:text-white transition-all font-bold">Área</button>
+                </div>
+            </div>
+
+            <p id="sidebar-label" class="text-white/50 text-xs mt-6 mb-2 uppercase tracking-wider font-semibold">Especializada</p>
         </div>
         <div class="flex-1 overflow-y-auto p-4 space-y-2 relative" id="sidebar-especializadas">
             <!-- Povoado via dashboard.js -->
@@ -54,11 +63,18 @@
     <!-- Main Content -->
     <main class="flex-1 p-8 h-screen overflow-y-auto z-10 relative">
         <div class="max-w-7xl mx-auto">
-            <header class="mb-10 border-b border-white/10 pb-6">
-                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-                    Dashboard Exploratório
-                </h1>
-                <p class="text-white/50 mt-2 text-sm">Análise da volumetria de processos, classes, assuntos e evolução temporal</p>
+            <header class="flex flex-wrap items-center justify-between mb-10 border-b border-white/10 pb-6 gap-4">
+                <div>
+                    <h1 id="dashboard-title" class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
+                        Dashboard Judicial
+                    </h1>
+                    <p id="dashboard-subtitle" class="text-white/50 mt-2 text-sm">Análise da volumetria de processos, classes, assuntos e evolução temporal</p>
+                </div>
+                
+                <div class="flex p-1 bg-white/5 rounded-xl border border-white/10">
+                    <button id="btn-judicial" class="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all shadow-lg">Judicial</button>
+                    <button id="btn-consultivo" class="px-6 py-2 rounded-lg text-white/50 hover:text-white transition-all">Consultivo</button>
+                </div>
             </header>
 
             <!-- KPIs -->
@@ -76,7 +92,7 @@
                     <div class="card-value" id="kpi-pico">---</div>
                 </div>
                 <div class="glass-panel p-6 shadow-lg transition-transform duration-300 hover:scale-105">
-                    <div class="card-title">Classe Principal</div>
+                    <div class="card-title" id="kpi-classe-label">Classe Principal</div>
                     <div class="card-value text-xl lg:text-2xl leading-tight" id="kpi-classe">---</div>
                 </div>
             </div>
@@ -93,7 +109,7 @@
 
                 <!-- Bar Chart: Classes -->
                 <div class="glass-panel p-6 shadow-lg col-span-1 lg:col-span-2">
-                    <h2 class="text-lg font-semibold mb-4 text-white/90">Top 10: Percentual por Classe (%)</h2>
+                    <h2 id="title-chart-classes" class="text-lg font-semibold mb-4 text-white/90">Top 10: Percentual por Classe (%)</h2>
                     <div class="relative h-96 w-full">
                         <canvas id="chartClasses"></canvas>
                     </div>
@@ -109,7 +125,7 @@
 
                 <!-- Doughnut: Especializadas -->
                 <div class="glass-panel p-6 shadow-lg col-span-1 lg:col-span-2 flex flex-col items-center">
-                    <h2 class="text-lg font-semibold mb-4 text-white/90 w-full text-left">Distribuição por Especializada</h2>
+                    <h2 id="title-chart-especializadas" class="text-lg font-semibold mb-4 text-white/90 w-full text-left">Distribuição por Especializada</h2>
                     <div class="relative h-80 w-full flex justify-center">
                         <canvas id="chartEspecializadas"></canvas>
                     </div>

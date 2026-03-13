@@ -10,7 +10,7 @@ def process_data():
         print(f"Erro: Arquivo {csv_file} não encontrado.")
         return
 
-    print("Lendo CSV...")
+    print("Lendo CSV Judicial...")
     df = pd.read_csv(csv_file)
 
     # Limpeza básica
@@ -20,11 +20,12 @@ def process_data():
     # Filtrar anos desejados (1997 a 2026)
     df = df[(df['Ano'] >= 1997) & (df['Ano'] <= 2026)]
 
-    print(f"Processando {len(df)} registros...")
+    print(f"Processando {len(df)} registros judiciais...")
 
     global_by_year = {}
-    esp_by_year = {}
-    especializadas_totals = {}
+    dimensions = {
+        'Especializada': {'totals': {}, 'by_year': {}}
+    }
 
     for _, row in df.iterrows():
         ano = str(row['Ano'])
@@ -44,31 +45,31 @@ def process_data():
         global_by_year[ano]['classes'][classe] = global_by_year[ano]['classes'].get(classe, 0) + 1
         global_by_year[ano]['assuntos'][assunto] = global_by_year[ano]['assuntos'].get(assunto, 0) + 1
         
-        # Totais por Especializada
-        especializadas_totals[esp] = especializadas_totals.get(esp, 0) + 1
+        # Especializada Dimension
+        dim_data = dimensions['Especializada']
+        dim_data['totals'][esp] = dim_data['totals'].get(esp, 0) + 1
         
-        # Agregado por Especializada e Ano
-        if esp not in esp_by_year:
-            esp_by_year[esp] = {}
-        if ano not in esp_by_year[esp]:
-            esp_by_year[esp][ano] = {'total': 0, 'classes': {}, 'assuntos': {}}
+        if esp not in dim_data['by_year']:
+            dim_data['by_year'][esp] = {}
+        if ano not in dim_data['by_year'][esp]:
+            dim_data['by_year'][esp][ano] = {'total': 0, 'classes': {}, 'assuntos': {}}
             
-        esp_by_year[esp][ano]['total'] += 1
-        esp_by_year[esp][ano]['classes'][classe] = esp_by_year[esp][ano]['classes'].get(classe, 0) + 1
-        esp_by_year[esp][ano]['assuntos'][assunto] = esp_by_year[esp][ano]['assuntos'].get(assunto, 0) + 1
+        y_data = dim_data['by_year'][esp][ano]
+        y_data['total'] += 1
+        y_data['classes'][classe] = y_data['classes'].get(classe, 0) + 1
+        y_data['assuntos'][assunto] = y_data['assuntos'].get(assunto, 0) + 1
 
     # Objeto final
     output_data = {
         'global_by_year': global_by_year,
-        'esp_by_year': esp_by_year,
-        'especializadas_totals': especializadas_totals
+        'dimensions': dimensions
     }
 
     print(f"Salvando dados em {json_file}...")
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
 
-    print("Sucesso! O dashboard lerá os novos dados automaticamente.")
+    print("Sucesso!")
 
 if __name__ == "__main__":
     process_data()

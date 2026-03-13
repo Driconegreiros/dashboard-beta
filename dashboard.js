@@ -3,6 +3,10 @@
  */
 
 let rawData = null;
+let judicialData = null;
+let consultivoData = null;
+let currentMode = 'judicial'; // 'judicial' ou 'consultivo'
+let currentDimension = 'Especializada'; // 'Especializada', 'Origem' ou 'Área'
 let evolucaoChart, classesChart, assuntosChart, especializadasChart;
 let currentEspecializada = 'Todas';
 
@@ -50,11 +54,13 @@ function updateChartDefaults() {
  * Inicializa o Dashboard carregando os dados externos
  */
 async function initDashboard() {
-    setupTheme(); // Configurar tema ANTES de qualquer coisa para evitar flicker e garantir elementos
+    setupTheme();
     
     try {
+        // Carregar dados judiciais por padrão
         const response = await fetch('data.json');
-        rawData = await response.json();
+        judicialData = await response.json();
+        rawData = judicialData;
         
         setupYearsSlider();
         initCharts();
@@ -66,9 +72,138 @@ async function initDashboard() {
         document.getElementById('year-end').addEventListener('input', handleYearSlider);
         document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
         
+        // Switchers
+        document.getElementById('btn-judicial').addEventListener('click', () => switchDataset('judicial'));
+        document.getElementById('btn-consultivo').addEventListener('click', () => switchDataset('consultivo'));
+        
+        // Dimension Listeners
+        document.getElementById('dim-btn-1').addEventListener('click', () => switchDimension(currentMode === 'judicial' ? 'Especializada' : 'Origem'));
+        document.getElementById('dim-btn-2').addEventListener('click', () => switchDimension('Área'));
+        
     } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
         document.body.innerHTML += `<div class="fixed inset-0 flex items-center justify-center bg-black/80 z-50 text-red-500 font-bold p-10 text-center">Erro crítico ao carregar dados (data.json). Verifique o console.</div>`;
+    }
+}
+
+async function switchDataset(mode) {
+    if (currentMode === mode) return;
+    currentMode = mode;
+
+    const btnJudicial = document.getElementById('btn-judicial');
+    const btnConsultivo = document.getElementById('btn-consultivo');
+    const dimSelector = document.getElementById('sidebar-dimension-selector');
+    const title = document.getElementById('dashboard-title');
+    const subtitle = document.getElementById('dashboard-subtitle');
+    const sidebarLabel = document.getElementById('sidebar-label');
+
+    if (mode === 'judicial') {
+        currentDimension = 'Especializada';
+        btnJudicial.className = "px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all shadow-lg";
+        btnConsultivo.className = "px-6 py-2 rounded-lg text-white/50 hover:text-white transition-all";
+        dimSelector.classList.add('hidden');
+        title.innerText = "Dashboard Judicial";
+        subtitle.innerText = "Análise da volumetria de processos, classes, assuntos e evolução temporal";
+        sidebarLabel.innerText = "Especializada";
+        document.getElementById('kpi-classe-label').innerText = "Classe Principal";
+
+        if (!judicialData) {
+            const response = await fetch('data.json');
+            judicialData = await response.json();
+        }
+        rawData = judicialData;
+    } else {
+        currentDimension = 'Origem';
+        btnConsultivo.className = "px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all shadow-lg";
+        btnJudicial.className = "px-6 py-2 rounded-lg text-white/50 hover:text-white transition-all";
+        dimSelector.classList.remove('hidden');
+        title.innerText = "Dashboard Consultivo";
+        subtitle.innerText = "Análise de processos consultivos, áreas, assuntos e evolução temporal";
+        sidebarLabel.innerText = "Origem";
+        
+        // Reset dimension buttons UI
+        updateDimensionButtons('Origem');
+
+        document.getElementById('kpi-classe-label').innerText = "Área Principal";
+
+        if (!consultivoData) {
+            try {
+                const response = await fetch('data_consultivo.json');
+                consultivoData = await response.json();
+            } catch (e) {
+                console.error("Erro ao carregar dados consultivos:", e);
+                return;
+            }
+        }
+        rawData = consultivoData;
+    }
+
+    setupYearsSlider();
+    populateSidebar();
+    updateChartTitles();
+    
+    // Atualizar dados do gráfico doughnut para refletir o novo dataset
+    const dimData = rawData.dimensions[currentDimension];
+    especializadasChart.data.labels = Object.keys(dimData.totals);
+    especializadasChart.data.datasets[0].data = Object.values(dimData.totals);
+    especializadasChart.update();
+
+    updateDashboard('Todas');
+}
+
+function updateChartTitles() {
+    const h2Classes = document.getElementById('title-chart-classes');
+    const h2Esp = document.getElementById('title-chart-especializadas');
+    
+    if (currentMode === 'judicial') {
+        h2Classes.innerText = "Top 10: Percentual por Classe (%)";
+        h2Esp.innerText = "Distribuição por Especializada";
+    } else {
+        // Modo Consultivo
+        if (currentDimension === 'Origem') {
+            h2Classes.innerText = "Top 10: Percentual por Área (%)";
+            h2Esp.innerText = "Distribuição por Origem";
+        } else {
+            // Requisito: quando for selecionado 'área', o Top 10 percentual deve ser por 'origem'
+            h2Classes.innerText = "Top 10: Percentual por Origem (%)";
+            h2Esp.innerText = "Distribuição por Área";
+        }
+    }
+}
+
+function switchDimension(dim) {
+    if (currentDimension === dim) return;
+    currentDimension = dim;
+    
+    updateDimensionButtons(dim);
+    document.getElementById('sidebar-label').innerText = dim;
+    
+    populateSidebar();
+    updateChartTitles();
+    
+    // Update doughnut chart
+    const dimData = rawData.dimensions[currentDimension];
+    especializadasChart.data.labels = Object.keys(dimData.totals);
+    especializadasChart.data.datasets[0].data = Object.values(dimData.totals);
+    especializadasChart.update();
+    
+    updateDashboard('Todas');
+}
+
+function updateDimensionButtons(activeDim) {
+    const btn1 = document.getElementById('dim-btn-1'); // Origem/Especializada
+    const btn2 = document.getElementById('dim-btn-2'); // Área
+    
+    const activeCls = "text-[10px] py-1.5 rounded-md bg-purple-500/20 text-white border border-purple-500/30 font-bold";
+    const inactiveCls = "text-[10px] py-1.5 rounded-md text-white/40 hover:text-white transition-all font-bold";
+    
+    if (activeDim === 'Área') {
+        btn2.className = activeCls;
+        btn1.className = inactiveCls;
+    } else {
+        btn1.className = activeCls;
+        btn2.className = inactiveCls;
+        btn1.innerText = currentMode === 'judicial' ? 'Especializada' : 'Origem';
     }
 }
 
@@ -159,8 +294,9 @@ function populateSidebar() {
 
     sidebarLista.appendChild(createBtn('Todas', true));
     
-    Object.keys(rawData.especializadas_totals).sort().forEach(esp => {
-        sidebarLista.appendChild(createBtn(esp));
+    const dimData = rawData.dimensions[currentDimension];
+    Object.keys(dimData.totals).sort().forEach(item => {
+        sidebarLista.appendChild(createBtn(item));
     });
 }
 
@@ -212,13 +348,14 @@ function initCharts() {
     // 3. Assuntos (Horizontal Bar)
     assuntosChart = createBarChart('chartAssuntos', 'rgba(236, 72, 153, 0.8)', barLabelsPlugin);
 
-    // 4. Especializadas (Doughnut)
+    // 4. Especializadas/Origem/Área (Doughnut)
+    const dimData = rawData.dimensions[currentDimension];
     especializadasChart = new Chart(document.getElementById('chartEspecializadas'), {
         type: 'doughnut',
         data: { 
-            labels: Object.keys(rawData.especializadas_totals), 
+            labels: Object.keys(dimData.totals), 
             datasets: [{ 
-                data: Object.values(rawData.especializadas_totals), 
+                data: Object.values(dimData.totals), 
                 backgroundColor: originalColorsDoughnut, 
                 borderWidth: 0 
             }] 
@@ -288,11 +425,11 @@ function updateDashboard(esp) {
     let aggregatedAssuntos = {};
     let dataAnosObj = {};
 
-    let allTimeTotal = Object.values(rawData.especializadas_totals).reduce((a, b) => a + b, 0);
-    let totalOfEspAllTime = esp === 'Todas' ? allTimeTotal : (rawData.especializadas_totals[esp] || 0);
+    let allTimeTotal = Object.values(rawData.dimensions[currentDimension].totals).reduce((a, b) => a + b, 0);
+    let totalOfEspAllTime = esp === 'Todas' ? allTimeTotal : (rawData.dimensions[currentDimension].totals[esp] || 0);
 
     validYears.forEach(y => {
-        let yData = esp === 'Todas' ? rawData.global_by_year[y] : (rawData.esp_by_year[esp] && rawData.esp_by_year[esp][y] ? rawData.esp_by_year[esp][y] : null);
+        let yData = esp === 'Todas' ? rawData.global_by_year[y] : (rawData.dimensions[currentDimension].by_year[esp] && rawData.dimensions[currentDimension].by_year[esp][y] ? rawData.dimensions[currentDimension].by_year[esp][y] : null);
         dataAnosObj[y] = yData ? yData.total : 0;
         if (yData) {
             dataTotal += yData.total;
@@ -309,20 +446,27 @@ function updateDashboard(esp) {
     document.getElementById('kpi-total').innerText = dataTotal.toLocaleString('pt-BR');
     
     if (esp === 'Todas') {
-        const topEsp = Object.entries(rawData.especializadas_totals).sort((a, b) => b[1] - a[1])[0];
-        document.getElementById('kpi-title-2').innerText = "Especializada Líder";
+        const topEsp = Object.entries(rawData.dimensions[currentDimension].totals).sort((a, b) => b[1] - a[1])[0];
+        document.getElementById('kpi-title-2').innerText = currentDimension + " Líder";
         document.getElementById('kpi-lider').innerHTML = `${topEsp[0]} <span class="text-sm font-normal text-white/50">(${(topEsp[1]/allTimeTotal*100).toFixed(0)}%)</span>`;
         especializadasChart.data.datasets[0].backgroundColor = originalColorsDoughnut;
     } else {
         document.getElementById('kpi-title-2').innerText = "Participação Histórica";
         document.getElementById('kpi-lider').innerHTML = `${(totalOfEspAllTime / allTimeTotal * 100).toFixed(1)}% <span class="text-sm font-normal text-white/50">do total</span>`;
-        const espIdx = Object.keys(rawData.especializadas_totals).indexOf(esp);
+        const espIdx = Object.keys(rawData.dimensions[currentDimension].totals).indexOf(esp);
         especializadasChart.data.datasets[0].backgroundColor = originalColorsDoughnut.map((c, i) => i === espIdx ? c : hexToRgba(c, 0.15));
     }
 
     let maxVal = Math.max(...dataAnos, 0);
     let picoAno = maxVal > 0 ? validYears[dataAnos.indexOf(maxVal)] : "N/A";
     document.getElementById('kpi-pico').innerHTML = `${picoAno} <span class="text-sm font-normal text-white/50">(${maxVal >= 1000 ? Math.round(maxVal / 1000) + 'k' : maxVal})</span>`;
+    
+    // Atualizar labels de KPI
+    if (currentMode === 'judicial') {
+        document.getElementById('kpi-classe-label').innerText = "Classe Principal";
+    } else {
+        document.getElementById('kpi-classe-label').innerText = currentDimension === 'Origem' ? "Área Principal" : "Origem Principal";
+    }
     document.getElementById('kpi-classe').innerText = dataClassesRes._labels[0] || "N/A";
 
     // Atualizar Gráficos

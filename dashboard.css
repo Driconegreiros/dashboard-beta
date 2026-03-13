@@ -14,7 +14,8 @@
 }
 
 .dark {
-    --bg-color: #0f172a; /* Slate 900 for a more premium dark mode than pure black */
+    --bg-color: #0f172a;
+    /* Slate 900 for a more premium dark mode than pure black */
     --text-primary: #f8fafc;
     --text-secondary: rgba(248, 250, 252, 0.6);
     --panel-bg: rgba(30, 41, 59, 0.5);
@@ -137,13 +138,16 @@ body {
 ::-webkit-scrollbar {
     width: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: var(--scrollbar-track);
 }
+
 ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb);
     opacity: 0.8;
@@ -173,29 +177,69 @@ body {
 }
 
 /* Override utility classes that are specifically white/black for the other mode */
-.dark .text-white\/50 { color: rgba(255, 255, 255, 0.4) !important; }
-.text-white\/50 { color: rgba(15, 23, 42, 0.5) !important; }
+.dark .text-white\/50 {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
 
-.dark .text-white\/90 { color: rgba(255, 255, 255, 0.9) !important; }
-.text-white\/90 { color: rgba(15, 23, 42, 0.9) !important; }
+.text-white\/50 {
+    color: rgba(15, 23, 42, 0.5) !important;
+}
 
-.dark .text-white { color: #fff !important; }
-.text-white { color: #0f172a !important; }
+.dark .text-white\/90 {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
 
-.dark .text-white\/60 { color: rgba(255, 255, 255, 0.6) !important; }
-.text-white\/60 { color: rgba(15, 23, 42, 0.6) !important; }
+.text-white\/90 {
+    color: rgba(15, 23, 42, 0.9) !important;
+}
 
-.dark .text-white\/20 { color: rgba(255, 255, 255, 0.2) !important; }
-.text-white\/20 { color: rgba(15, 23, 42, 0.2) !important; }
+.dark .text-white {
+    color: #fff !important;
+}
 
-.dark .border-white\/10 { border-color: rgba(255, 255, 255, 0.1) !important; }
-.border-white\/10 { border-color: rgba(15, 23, 42, 0.1) !important; }
+.text-white {
+    color: #0f172a !important;
+}
 
-.dark .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05) !important; }
-.bg-white\/5 { background-color: rgba(15, 23, 42, 0.05) !important; }
+.dark .text-white\/60 {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
 
-.dark .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1) !important; }
-.bg-white\/10 { background-color: rgba(15, 23, 42, 0.05) !important; }
+.text-white\/60 {
+    color: rgba(15, 23, 42, 0.6) !important;
+}
+
+.dark .text-white\/20 {
+    color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.text-white\/20 {
+    color: rgba(15, 23, 42, 0.2) !important;
+}
+
+.dark .border-white\/10 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.border-white\/10 {
+    border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+.dark .bg-white\/5 {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.bg-white\/5 {
+    background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.dark .bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.bg-white\/10 {
+    background-color: rgba(15, 23, 42, 0.05) !important;
+}
 
 /* Inverter filtros e transições suaves */
 #sidebar-especializadas button.active {
@@ -207,4 +251,3 @@ body {
     background: linear-gradient(to right, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.2));
     border-color: rgba(168, 85, 247, 0.5);
 }
-
