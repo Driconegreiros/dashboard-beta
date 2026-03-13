@@ -438,6 +438,18 @@ function updateDashboard(esp) {
         }
     });
 
+    // Agregação para o gráfico Doughnut baseada nos anos selecionados
+    const currentDimItems = Object.keys(rawData.dimensions[currentDimension].totals);
+    const doughnutData = currentDimItems.map(item => {
+        let count = 0;
+        validYears.forEach(y => {
+            if (rawData.dimensions[currentDimension].by_year[item] && rawData.dimensions[currentDimension].by_year[item][y]) {
+                count += rawData.dimensions[currentDimension].by_year[item][y].total;
+            }
+        });
+        return count;
+    });
+
     const dataClassesRes = getTop10Percent(aggregatedClasses);
     const dataAssuntosRes = getTop10Percent(aggregatedAssuntos);
     const dataAnos = validYears.map(y => dataAnosObj[y] || 0);
@@ -476,6 +488,10 @@ function updateDashboard(esp) {
 
     updateBarChart(classesChart, dataClassesRes, [59, 130, 246]);
     updateBarChart(assuntosChart, dataAssuntosRes, [236, 72, 153]);
+    
+    // Atualizar dados do Doughnut
+    especializadasChart.data.labels = currentDimItems;
+    especializadasChart.data.datasets[0].data = doughnutData;
     especializadasChart.update();
 }
 
