@@ -11,6 +11,9 @@
     
     <!-- Custom Styles -->
     <link rel="stylesheet" href="dashboard.css">
+    
+    <!-- Auth Logic -->
+    <script type="module" src="auth.js"></script>
 </head>
 
 <body class="flex font-sans min-h-screen overflow-hidden transition-colors duration-300">
@@ -71,9 +74,22 @@
                     <p id="dashboard-subtitle" class="text-white/50 mt-2 text-sm">Análise da volumetria de processos, classes, assuntos e evolução temporal</p>
                 </div>
                 
-                <div class="flex p-1 bg-white/5 rounded-xl border border-white/10">
-                    <button id="btn-judicial" class="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all shadow-lg">Judicial</button>
-                    <button id="btn-consultivo" class="px-6 py-2 rounded-lg text-white/50 hover:text-white transition-all">Consultivo</button>
+                <div class="flex items-center gap-4">
+                    <div class="flex p-1 bg-white/5 rounded-xl border border-white/10">
+                        <button id="btn-judicial" class="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all shadow-lg">Judicial</button>
+                        <button id="btn-consultivo" class="px-6 py-2 rounded-lg text-white/50 hover:text-white transition-all">Consultivo</button>
+                    </div>
+
+                    <!-- User Profile & Logout -->
+                    <div id="user-profile-widget" class="hidden items-center gap-3 border-l border-white/10 pl-4 animate-in fade-in duration-500">
+                        <div class="flex flex-col items-end">
+                            <span id="user-name" class="text-sm font-bold text-white/90">Carregando...</span>
+                            <button onclick="window.logoutApp()" class="text-xs text-red-500 hover:text-red-400 font-bold transition-colors">Sair</button>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white/20">
+                            <span id="user-initial">U</span>
+                        </div>
+                    </div>
                 </div>
             </header>
 
