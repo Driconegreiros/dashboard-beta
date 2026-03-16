@@ -157,13 +157,13 @@ if (isLoginPage) {
 // Redireciona usuários não logados e controla a sessão global
 if (isFirebaseConfigured) {
     onAuthStateChanged(auth, (user) => {
-        const isLoginPage = window.location.pathname.includes('login.html');
+        const isLoginPage = window.location.pathname.includes('login');
         
         if (user) {
             // Usuário logado
             if (isLoginPage) {
                 // Se está na tela de login e logou, vai pro painel
-                window.location.href = 'index.html';
+                window.location.href = '/';
             } else {
                 console.log("Usuário Autenticado: ", user.email);
                 
@@ -182,7 +182,7 @@ if (isFirebaseConfigured) {
             }
         } else {
             // Usuário Deslogado
-            if (!isLoginPage && !window.location.pathname.endsWith('/')) {
+            if (!isLoginPage) {
                 // Se NÃO estiver no login, chutar pra tela de login
                 window.location.href = 'login.html';
             }
