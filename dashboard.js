@@ -7,8 +7,9 @@ let judicialData = null;
 let consultivoData = null;
 let currentMode = 'judicial'; // 'judicial' ou 'consultivo'
 let currentDimension = 'Especializada'; // 'Especializada', 'Origem' ou 'Área'
-let evolucaoChart, classesChart, assuntosChart, especializadasChart;
+let evolucaoChart, classesChart, assuntosChart, especializadasChart, cpracChart;
 let currentEspecializada = 'Todas';
+let cpracData = [];
 
 // Cores globais do Design System
 const originalColorsDoughnut = [
@@ -37,7 +38,7 @@ function updateChartDefaults() {
 
     // Atualizar cores de grade e eixos (ticks), e redesenhar TODOS os gráficos
     gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.05)';
-    [evolucaoChart, classesChart, assuntosChart, especializadasChart].forEach(chart => {
+    [evolucaoChart, classesChart, assuntosChart, especializadasChart, cpracChart].forEach(chart => {
         if (!chart) return;
         
         if (chart.options.scales) {
@@ -62,6 +63,8 @@ async function initDashboard() {
         judicialData = await response.json();
         rawData = judicialData;
         
+        await loadCpracData();
+        
         setupYearsSlider();
         initCharts();
         populateSidebar();
@@ -71,6 +74,9 @@ async function initDashboard() {
         document.getElementById('year-start').addEventListener('input', handleYearSlider);
         document.getElementById('year-end').addEventListener('input', handleYearSlider);
         document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+        document.getElementById('cprac-year-filter').addEventListener('change', (e) => {
+            updateCpracChart(e.target.value);
+        });
         
         // Switchers
         document.getElementById('btn-judicial').addEventListener('click', () => switchDataset('judicial'));
@@ -112,6 +118,9 @@ async function switchDataset(mode) {
             judicialData = await response.json();
         }
         rawData = judicialData;
+        
+        const cpracContainer = document.getElementById('container-cprac-judicial');
+        if (cpracContainer) cpracContainer.classList.remove('hidden');
     } else {
         currentDimension = 'Origem';
         btnConsultivo.className = "px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all shadow-lg";
@@ -136,6 +145,9 @@ async function switchDataset(mode) {
             }
         }
         rawData = consultivoData;
+
+        const cpracContainer = document.getElementById('container-cprac-judicial');
+        if (cpracContainer) cpracContainer.classList.add('hidden');
     }
 
     setupYearsSlider();
@@ -327,14 +339,22 @@ function initCharts() {
             chart.data.datasets.forEach((dataset, i) => {
                 const meta = chart.getDatasetMeta(i);
                 meta.data.forEach((element, index) => {
-                    const val = dataset._raw[index];
+                    const val = dataset._raw ? dataset._raw[index] : dataset.data[index];
                     if (val) {
                         ctx.save();
                         ctx.fillStyle = labelColor;
                         ctx.font = "bold 11px 'Inter', sans-serif";
-                        ctx.textAlign = 'left';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(val.toLocaleString('pt-BR'), element.tooltipPosition().x + 6, element.tooltipPosition().y);
+                        
+                        if (chart.options.indexAxis === 'y') {
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(val.toLocaleString('pt-BR'), element.tooltipPosition().x + 6, element.tooltipPosition().y);
+                        } else {
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            ctx.fillText(val.toLocaleString('pt-BR'), element.tooltipPosition().x, element.tooltipPosition().y - 6);
+                        }
+                        
                         ctx.restore();
                     }
                 });
@@ -380,6 +400,38 @@ function initCharts() {
             } 
         }
     });
+
+    // 5. Novo Gráfico: CPRAC PPC vs PPM
+    const ctxCprac = document.getElementById('chartCpracJudicial').getContext('2d');
+    cpracChart = new Chart(ctxCprac, {
+        type: 'bar',
+        data: {
+            labels: ['CPRAC - PPC', 'CPRAC - PPM'],
+            datasets: [{
+                label: 'Processos',
+                data: [0, 0],
+                backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(236, 72, 153, 0.8)'],
+                borderRadius: 6,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toLocaleString('pt-BR')} processos` } }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
+            }
+        },
+        plugins: [barLabelsPlugin]
+    });
+    
+    // Configura os dados do CPRAC inicial
+    updateCpracChart('2025');
 }
 
 function createBarChart(canvasId, color, plugin) {
@@ -545,6 +597,48 @@ function updateSliderUI() {
 function handleYearSlider(e) {
     updateSliderUI();
     updateDashboard(currentEspecializada);
+}
+
+// Data parser for CPRAC
+async function loadCpracData() {
+    try {
+        const response = await fetch('CPRAC-PPMePPCjudicial.csv');
+        const text = await response.text();
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        
+        cpracData = lines.slice(1).map(line => {
+            const parts = line.split(',');
+            if (parts.length >= 6) {
+                const esp = parts[parts.length - 1].trim().replace(/\r$/, '');
+                const anoRaw = parts[parts.length - 2].trim();
+                return {
+                    ano: parseFloat(anoRaw),
+                    especializada: esp
+                };
+            }
+            return null;
+        }).filter(item => item !== null);
+    } catch (e) {
+        console.error("Erro ao carregar dados do CPRAC:", e);
+    }
+}
+
+function updateCpracChart(yearFilter) {
+    if (!cpracChart) return;
+    const yearSelect = parseInt(yearFilter);
+    let ppcCount = 0;
+    let ppmCount = 0;
+    
+    cpracData.forEach(row => {
+        if (Math.round(row.ano) === yearSelect) {
+            if (row.especializada.includes('PPC')) ppcCount++;
+            if (row.especializada.includes('PPM')) ppmCount++;
+        }
+    });
+
+    cpracChart.data.datasets[0].data = [ppcCount, ppmCount];
+    cpracChart.data.datasets[0]._raw = [ppcCount, ppmCount];
+    cpracChart.update();
 }
 
 // Iniciar quando o DOM estiver pronto
