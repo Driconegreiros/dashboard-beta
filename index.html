@@ -9,6 +9,7 @@
     <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="dashboard.css">
@@ -182,6 +183,15 @@
                     <div class="relative h-80 w-full flex justify-center">
                         <canvas id="chartCpracJudicial"></canvas>
                     </div>
+                </div>
+
+                <!-- Heat Map: Amazonas -->
+                <div id="container-map" class="glass-panel p-6 shadow-lg col-span-1 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-white/90">Mapa de Calor dos Interiores</h2>
+                    </div>
+                    <!-- Added relative to make echarts fit -->
+                    <div class="relative w-full h-[500px]" id="chartMap"></div>
                 </div>
             </div>
         </div>

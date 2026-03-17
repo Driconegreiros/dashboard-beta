@@ -11,7 +11,7 @@ def process_data():
         return
 
     print("Lendo CSV Judicial...")
-    df = pd.read_csv(csv_file)
+    df = pd.read_csv(csv_file, encoding='utf-8')
 
     # Limpeza básica
     df = df.dropna(subset=['Ano'])
@@ -39,11 +39,14 @@ def process_data():
         
         # Agregado Global
         if ano not in global_by_year:
-            global_by_year[ano] = {'total': 0, 'classes': {}, 'assuntos': {}}
+            global_by_year[ano] = {'total': 0, 'classes': {}, 'assuntos': {}, 'comarcas': {}}
         
+        comarca = str(row['Comarca']) if not pd.isna(row['Comarca']) else "Desconhecida"
+
         global_by_year[ano]['total'] += 1
         global_by_year[ano]['classes'][classe] = global_by_year[ano]['classes'].get(classe, 0) + 1
         global_by_year[ano]['assuntos'][assunto] = global_by_year[ano]['assuntos'].get(assunto, 0) + 1
+        global_by_year[ano]['comarcas'][comarca] = global_by_year[ano]['comarcas'].get(comarca, 0) + 1
         
         # Especializada Dimension
         dim_data = dimensions['Especializada']
@@ -52,12 +55,13 @@ def process_data():
         if esp not in dim_data['by_year']:
             dim_data['by_year'][esp] = {}
         if ano not in dim_data['by_year'][esp]:
-            dim_data['by_year'][esp][ano] = {'total': 0, 'classes': {}, 'assuntos': {}}
+            dim_data['by_year'][esp][ano] = {'total': 0, 'classes': {}, 'assuntos': {}, 'comarcas': {}}
             
         y_data = dim_data['by_year'][esp][ano]
         y_data['total'] += 1
         y_data['classes'][classe] = y_data['classes'].get(classe, 0) + 1
         y_data['assuntos'][assunto] = y_data['assuntos'].get(assunto, 0) + 1
+        y_data['comarcas'][comarca] = y_data['comarcas'].get(comarca, 0) + 1
 
     # Objeto final
     output_data = {

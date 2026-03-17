@@ -7,9 +7,11 @@ let judicialData = null;
 let consultivoData = null;
 let currentMode = 'judicial'; // 'judicial' ou 'consultivo'
 let currentDimension = 'Especializada'; // 'Especializada', 'Origem' ou 'Área'
-let evolucaoChart, classesChart, assuntosChart, especializadasChart, cpracChart;
+let evolucaoChart, classesChart, assuntosChart, especializadasChart, cpracChart, amazonasMapChart;
 let currentEspecializada = 'Todas';
 let cpracData = [];
+let geoJsonAmazonas = null;
+let geoJsonMapMatcher = {};
 
 // Cores globais do Design System
 const originalColorsDoughnut = [
@@ -64,6 +66,7 @@ async function initDashboard() {
         rawData = judicialData;
         
         await loadCpracData();
+        await loadGeoJsonData();
         
         setupYearsSlider();
         initCharts();
@@ -395,7 +398,13 @@ function initCharts() {
         }
     });
 
-    // 5. Novo Gráfico: CPRAC PPC vs PPM
+    // 5. Heatmap Amazonas (ECharts)
+    if (document.getElementById('chartMap')) {
+        amazonasMapChart = echarts.init(document.getElementById('chartMap'));
+        window.addEventListener('resize', () => amazonasMapChart.resize());
+    }
+
+    // 6. Novo Gráfico: CPRAC PPC vs PPM
     const ctxCprac = document.getElementById('chartCpracJudicial').getContext('2d');
     cpracChart = new Chart(ctxCprac, {
         type: 'doughnut',
@@ -473,6 +482,7 @@ function updateDashboard(esp) {
     let dataTotal = 0;
     let aggregatedClasses = {};
     let aggregatedAssuntos = {};
+    let aggregatedComarcas = {};
     let dataAnosObj = {};
 
     let allTimeTotal = Object.values(rawData.dimensions[currentDimension].totals).reduce((a, b) => a + b, 0);
@@ -483,8 +493,21 @@ function updateDashboard(esp) {
         dataAnosObj[y] = yData ? yData.total : 0;
         if (yData) {
             dataTotal += yData.total;
-            Object.entries(yData.classes).forEach(([c, v]) => aggregatedClasses[c] = (aggregatedClasses[c] || 0) + v);
-            Object.entries(yData.assuntos).forEach(([a, v]) => aggregatedAssuntos[a] = (aggregatedAssuntos[a] || 0) + v);
+            Object.entries(yData.classes || {}).forEach(([c, v]) => aggregatedClasses[c] = (aggregatedClasses[c] || 0) + v);
+            Object.entries(yData.assuntos || {}).forEach(([a, v]) => aggregatedAssuntos[a] = (aggregatedAssuntos[a] || 0) + v);
+            Object.entries(yData.comarcas || {}).forEach(([c, v]) => {
+                // Remove prefixos judiciais
+                let c_clean = c.replace(/^(Comarca|Subseção Judiciária|Seção Judiciária) (de |do |da )?/i, '').trim();
+                
+                // Cria uma chave super simples (A-Z letras minúsculas sem acento) para bater
+                let norm = c_clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+                
+                // Mapeia pela dicionário construído ou ignora se for NaN na listagem
+                let correctName = geoJsonMapMatcher[norm];
+                if (correctName) {
+                    aggregatedComarcas[correctName] = (aggregatedComarcas[correctName] || 0) + v;
+                }
+            });
         }
     });
 
@@ -556,6 +579,81 @@ function updateDashboard(esp) {
             cpracContainer.classList.remove('flex');
         }
     }
+
+    const mapContainer = document.getElementById('container-map');
+    if (mapContainer) {
+        if (currentMode === 'judicial') {
+            mapContainer.classList.remove('hidden');
+            if (amazonasMapChart && geoJsonAmazonas) {
+                updateAmazonasMap(aggregatedComarcas);
+            }
+        } else {
+            mapContainer.classList.add('hidden');
+        }
+    }
+}
+
+function updateAmazonasMap(comarcasData) {
+    if (!geoJsonAmazonas) return;
+    const isDark = document.documentElement.classList.contains('dark');
+    const labelColor = isDark ? '#FFF' : '#000';
+
+    const mapSeriesData = Object.entries(comarcasData)
+        .filter(([name]) => name !== 'Manaus')
+        .map(([name, value]) => ({ 
+            name: name, 
+            value: value 
+        }));
+
+    // Pegar o máximo para balizar o color scale
+    let maxVal = Math.max(...mapSeriesData.map(d => d.value), 1);
+
+    const option = {
+        tooltip: {
+            trigger: 'item',
+            formatter: '{b}<br/>Processos: <b>{c}</b>'
+        },
+        visualMap: {
+            show: false,
+            left: 'right',
+            min: 0,
+            max: maxVal,
+            inRange: {
+                color: ['#eff6ff', '#1e3a8a'] // Azul claro ao zul escuro
+            },
+            text: ['Mais', 'Menos'],
+            textStyle: {
+                color: labelColor
+            },
+            calculable: true
+        },
+        series: [
+            {
+                name: 'Processos',
+                type: 'map',
+                map: 'AMAZONAS',
+                roam: false, // Desabilita o zoom e pan
+                zoom: 1.2, // Aumenta a largura/tamanho inicial do mapa
+                aspectScale: 1.0, // Escala de aspecto em 1.0 evita distorção ou achatamento
+                itemStyle: {
+                    borderColor: 'rgba(255,255,255,0.4)'
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        color: '#FFF',
+                        fontWeight: 'bold',
+                        textBorderColor: 'rgba(0,0,0,0.5)',
+                        textBorderWidth: 2
+                    }
+                },
+                select: { disabled: true },
+                data: mapSeriesData
+            }
+        ]
+    };
+
+    amazonasMapChart.setOption(option);
 }
 
 function updateBarChart(chart, res, rgb) {
@@ -650,6 +748,58 @@ function updateCpracChart(yearFilter) {
     cpracChart.data.datasets[0].data = [ppcCount, ppmCount];
     cpracChart.data.datasets[0]._raw = [ppcCount, ppmCount];
     cpracChart.update();
+}
+
+async function loadGeoJsonData() {
+    try {
+        const response = await fetch('https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-13-mun.json');
+        geoJsonAmazonas = await response.json();
+
+        // Normalizer: remove acentos, lowercase, só letras
+        const toNorm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+
+        // Nomes corretos dos municípios do Amazonas (com acentuação correta UTF-8)
+        // Usados para corrigir possíveis corrupções do GeoJSON via normalização exata
+        const correctNames = [
+            'Alvarães','Amaturá','Anamã','Anori','Apuí','Atalaia do Norte','Autazes',
+            'Barcelos','Barreirinha','Benjamin Constant','Beruri','Boa Vista do Ramos',
+            'Boca do Acre','Borba','Caapiranga','Canutama','Carauari','Careiro',
+            'Careiro da Várzea','Coari','Codajás','Eirunepé','Envira','Fonte Boa',
+            'Guajará','Humaitá','Ipixuna','Iranduba','Itacoatiara','Itamarati',
+            'Itapiranga','Japurá','Juruá','Jutaí','Lábrea','Manacapuru','Manaquiri',
+            'Manaus','Manicoré','Maraã','Maués','Nhamundá','Nova Olinda do Norte',
+            'Novo Airão','Novo Aripuanã','Parintins','Pauini','Presidente Figueiredo',
+            'Rio Preto da Eva','Santa Isabel do Rio Negro','Santo Antônio do Içá',
+            'Silves','São Gabriel da Cachoeira','São Paulo de Olivença',
+            'São Sebastião do Uatumã','Tabatinga','Tapauá','Tefé','Tonantins',
+            'Uarini','Urucará','Urucurituba'
+        ];
+
+        // Constrói dicionário: norm(nome_correto) -> nome_correto
+        const correctByNorm = {};
+        correctNames.forEach(n => { correctByNorm[toNorm(n)] = n; });
+
+        geoJsonAmazonas.features.forEach(f => {
+            const rawNorm = toNorm(f.properties.name);
+            // Substitui nome corrompido pelo nome correto se encontrar equivalente normalizado
+            if (correctByNorm[rawNorm]) {
+                f.properties.name = correctByNorm[rawNorm];
+            }
+            // Registra no matcher global
+            geoJsonMapMatcher[toNorm(f.properties.name)] = f.properties.name;
+        });
+
+        // Alias: Careiro Castanho (CSV) e Careiro da Várzea -> Careiro (IBGE único)
+        if (geoJsonMapMatcher['careiro']) {
+            geoJsonMapMatcher['careirocastanho'] = geoJsonMapMatcher['careiro'];
+        }
+
+        // Registrando o mapa no echarts globalmente
+        echarts.registerMap('AMAZONAS', geoJsonAmazonas);
+
+    } catch (e) {
+        console.error("Erro ao carregar GeoJSON do Amazonas:", e);
+    }
 }
 
 // Iniciar quando o DOM estiver pronto
