@@ -404,30 +404,34 @@ function initCharts() {
     // 5. Novo Gráfico: CPRAC PPC vs PPM
     const ctxCprac = document.getElementById('chartCpracJudicial').getContext('2d');
     cpracChart = new Chart(ctxCprac, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
             labels: ['CPRAC - PPC', 'CPRAC - PPM'],
             datasets: [{
-                label: 'Processos',
                 data: [0, 0],
-                backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(236, 72, 153, 0.8)'],
-                borderRadius: 6,
-                barPercentage: 0.6
+                backgroundColor: ['#ec4899', '#3b82f6'],
+                borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '50%', // Preenche mais a circunferência reduzindo o buraco central
             plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toLocaleString('pt-BR')} processos` } }
-            },
-            scales: {
-                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { stepSize: 1 } },
-                x: { grid: { display: false } }
+                legend: { position: 'right', labels: { padding: 20, usePointStyle: true } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                            return `${label}: ${percentage} (${value.toLocaleString('pt-BR')} processos)`;
+                        }
+                    }
+                }
             }
-        },
-        plugins: [barLabelsPlugin]
+        }
     });
     
     // Configura os dados do CPRAC inicial
