@@ -304,7 +304,10 @@ function populateSidebar() {
     sidebarLista.appendChild(createBtn('Todas', true));
     
     const dimData = rawData.dimensions[currentDimension];
-    Object.keys(dimData.totals).sort().forEach(item => {
+    // Ordena por quantidade descendente, limita ao Top 10 no Consultivo
+    let entries = Object.entries(dimData.totals).sort((a, b) => b[1] - a[1]);
+    if (currentMode === 'consultivo') entries = entries.slice(0, 20);
+    entries.forEach(([item]) => {
         sidebarLista.appendChild(createBtn(item));
     });
 }
@@ -322,7 +325,18 @@ function initCharts() {
     evolucaoChart = new Chart(ctxEvolucao, {
         type: 'line',
         data: { labels: [], datasets: [{ label: 'Processos', data: [], borderColor: '#a855f7', backgroundColor: gradientLine, borderWidth: 2, pointRadius: 4, fill: true, tension: 0.4 }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: gridColor } }, y: { grid: { color: gridColor }, beginAtZero: true } }, plugins: { legend: { display: false } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { grid: { color: gridColor } },
+                y: { grid: { color: gridColor }, beginAtZero: true }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
     });
 
     // Plugin para labels nas barras
@@ -554,9 +568,67 @@ function updateDashboard(esp) {
     }
     document.getElementById('kpi-classe').innerText = dataClassesRes._labels[0] || "N/A";
 
-    // Atualizar Gráficos
+    // Atualizar Gráficos - Evolução Temporal
     evolucaoChart.data.labels = validYears;
-    evolucaoChart.data.datasets[0].data = dataAnos;
+
+    if (esp === 'Todas') {
+        // Multi-series: uma linha por Especializada/Dimensão
+        const seriesColors = [
+            '#a855f7','#3b82f6','#ec4899','#10b981','#f59e0b',
+            '#06b6d4','#ef4444','#84cc16','#f97316','#8b5cf6',
+            '#14b8a6','#e879f9','#fb923c','#34d399','#60a5fa'
+        ];
+        const allItems = Object.entries(rawData.dimensions[currentDimension].totals)
+            .sort((a, b) => b[1] - a[1]) // Ordena por quantidade descendente
+            .map(([item]) => item);
+        // No Consultivo, limita ao Top 10
+        const limitedItems = currentMode === 'consultivo' ? allItems.slice(0, 20) : allItems;
+        const multiDatasets = limitedItems.map((item, idx) => {
+            const color = seriesColors[idx % seriesColors.length];
+            const data = validYears.map(y => {
+                const yData = rawData.dimensions[currentDimension].by_year[item];
+                return yData && yData[y] ? yData[y].total : 0;
+            });
+            return {
+                label: item,
+                data,
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 3,
+                fill: false,
+                tension: 0.4
+            };
+        });
+        evolucaoChart.data.datasets = multiDatasets;
+        evolucaoChart.options.plugins.legend.display = true;
+        evolucaoChart.options.plugins.legend.position = 'bottom';
+        evolucaoChart.options.plugins.legend.labels = {
+            padding: 16,
+            usePointStyle: true,
+            boxWidth: 10
+        };
+        evolucaoChart.options.plugins.tooltip = { enabled: false };
+    } else {
+        // Single-series: só a especializada selecionada
+        const ctxEv = document.getElementById('chartEvolucao').getContext('2d');
+        const grad = ctxEv.createLinearGradient(0, 0, 0, 400);
+        grad.addColorStop(0, 'rgba(168, 85, 247, 0.5)');
+        grad.addColorStop(1, 'rgba(168, 85, 247, 0.0)');
+        evolucaoChart.data.datasets = [{
+            label: esp,
+            data: dataAnos,
+            borderColor: '#a855f7',
+            backgroundColor: grad,
+            borderWidth: 2,
+            pointRadius: 4,
+            fill: true,
+            tension: 0.4
+        }];
+        evolucaoChart.options.plugins.legend.display = false;
+        evolucaoChart.options.plugins.tooltip = { enabled: true };
+    }
+
     evolucaoChart.update();
 
     updateBarChart(classesChart, dataClassesRes, [59, 130, 246]);
@@ -598,12 +670,15 @@ function updateAmazonasMap(comarcasData) {
     const isDark = document.documentElement.classList.contains('dark');
     const labelColor = isDark ? '#FFF' : '#000';
 
-    const mapSeriesData = Object.entries(comarcasData)
-        .filter(([name]) => name !== 'Manaus')
-        .map(([name, value]) => ({ 
-            name: name, 
-            value: value 
-        }));
+    // Garante que todos os municípios do GeoJSON apareçam no mapa (NaN -> 0)
+    const allMunicipios = geoJsonAmazonas.features
+        .map(f => f.properties.name)
+        .filter(name => name !== 'Manaus');
+
+    const mapSeriesData = allMunicipios.map(name => ({
+        name: name,
+        value: comarcasData[name] || 0
+    }));
 
     // Pegar o máximo para balizar o color scale
     let maxVal = Math.max(...mapSeriesData.map(d => d.value), 1);
