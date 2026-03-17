@@ -118,9 +118,6 @@ async function switchDataset(mode) {
             judicialData = await response.json();
         }
         rawData = judicialData;
-        
-        const cpracContainer = document.getElementById('container-cprac-judicial');
-        if (cpracContainer) cpracContainer.classList.remove('hidden');
     } else {
         currentDimension = 'Origem';
         btnConsultivo.className = "px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold transition-all shadow-lg";
@@ -145,9 +142,6 @@ async function switchDataset(mode) {
             }
         }
         rawData = consultivoData;
-
-        const cpracContainer = document.getElementById('container-cprac-judicial');
-        if (cpracContainer) cpracContainer.classList.add('hidden');
     }
 
     setupYearsSlider();
@@ -406,7 +400,7 @@ function initCharts() {
     cpracChart = new Chart(ctxCprac, {
         type: 'doughnut',
         data: {
-            labels: ['CPRAC - PPC', 'CPRAC - PPM'],
+            labels: ['PPC', 'PPM'],
             datasets: [{
                 data: [0, 0],
                 backgroundColor: ['#ec4899', '#3b82f6'],
@@ -549,6 +543,19 @@ function updateDashboard(esp) {
     especializadasChart.data.labels = currentDimItems;
     especializadasChart.data.datasets[0].data = doughnutData;
     especializadasChart.update();
+
+    // Condição de exibição do gráfico CPRAC = PPM/PPC
+    const cpracContainer = document.getElementById('container-cprac-judicial');
+    if (cpracContainer) {
+        if (currentMode === 'judicial' && esp === 'CPRAC') {
+            cpracContainer.classList.remove('hidden');
+            // Como display flex/hidden às vezes conflita, garanta que seja flex qdo visível
+            cpracContainer.classList.add('flex');
+        } else {
+            cpracContainer.classList.add('hidden');
+            cpracContainer.classList.remove('flex');
+        }
+    }
 }
 
 function updateBarChart(chart, res, rgb) {
