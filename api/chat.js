@@ -51,11 +51,16 @@ function buildTopSummary(data, n = 10) {
     return { classes: top(classes), assuntos: top(assuntos) };
 }
 
-// Processado uma única vez na inicialização do container
-const judicial = loadJson('data.json');
-const consultivo = loadJson('data_consultivo.json');
+// Cache — carregado na primeira requisição (cold start) e reutilizado nas seguintes
+let DATA_CONTEXT = null;
 
-const DATA_CONTEXT = `
+function buildDataContext() {
+    const judicial = loadJson('data.json');
+    const consultivo = loadJson('data_consultivo.json');
+
+    console.log('[chat] judicial ok:', !!judicial, '| consultivo ok:', !!consultivo);
+
+    return `
 === JUDICIAL — Especializadas (total histórico) ===
 ${buildDimensionSummary(judicial, 'Especializada')}
 
@@ -83,6 +88,7 @@ ${buildTopSummary(consultivo).classes}
 === CONSULTIVO — Top 10 Assuntos ===
 ${buildTopSummary(consultivo).assuntos}
 `.trim();
+}
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
@@ -98,6 +104,8 @@ module.exports = async function handler(req, res) {
     if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: 'Mensagens inválidas' });
     }
+
+    if (!DATA_CONTEXT) DATA_CONTEXT = buildDataContext();
 
     const systemPrompt = `Você é um assistente de análise de dados de um dashboard jurídico com acesso TOTAL e IRRESTRITO a todos os dados, independente da aba ou filtro ativo no dashboard.
 
