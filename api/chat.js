@@ -23,18 +23,54 @@ function buildYearSummary(data) {
 }
 
 function buildComarcaSummary(data) {
+    // comarca -> { total, por especializada }
     const comarcas = {};
     const prefixRegex = /^(Comarca|Subseção Judiciária|Seção Judiciária) (de |do |da )?/i;
+    const norm = c => c.replace(prefixRegex, '').trim();
+
+    // Total por comarca (via global_by_year)
     Object.values(data?.global_by_year || {}).forEach(y => {
         Object.entries(y.comarcas || {}).forEach(([c, v]) => {
-            const name = c.replace(prefixRegex, '').trim();
-            comarcas[name] = (comarcas[name] || 0) + v;
+            const name = norm(c);
+            if (!comarcas[name]) comarcas[name] = { total: 0, esp: {} };
+            comarcas[name].total += v;
         });
     });
+
+    // Desagregação por especializada e assunto (via dimensions.Especializada.by_year)
+    const espByYear = data?.dimensions?.Especializada?.by_year || {};
+    Object.entries(espByYear).forEach(([esp, years]) => {
+        Object.values(years).forEach(yData => {
+            Object.entries(yData.comarcas || {}).forEach(([c, v]) => {
+                const name = norm(c);
+                if (!comarcas[name]) comarcas[name] = { total: 0, esp: {}, assuntos: {} };
+                comarcas[name].esp[esp] = (comarcas[name].esp[esp] || 0) + v;
+            });
+        });
+    });
+
+    // Assuntos por comarca via global_by_year (assuntos não vêm desagregados por comarca no JSON)
+    // Portanto agregamos assuntos globais do dataset para uso geral
+    const assuntosGlobais = {};
+    Object.values(data?.global_by_year || {}).forEach(y => {
+        Object.entries(y.assuntos || {}).forEach(([a, v]) => {
+            assuntosGlobais[a] = (assuntosGlobais[a] || 0) + v;
+        });
+    });
+    const topAssuntosGlobais = Object.entries(assuntosGlobais)
+        .sort((a, b) => b[1] - a[1]).slice(0, 10)
+        .map(([k, v]) => `${k}:${v}`).join(',');
+
     return Object.entries(comarcas)
-        .sort((a, b) => b[1] - a[1])
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(' | ');
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([k, v]) => {
+            const espStr = Object.entries(v.esp)
+                .sort((a, b) => b[1] - a[1])
+                .map(([e, n]) => `${e}:${n}`)
+                .join(',');
+            return `${k}(total:${v.total}|esp:${espStr})`;
+        })
+        .join(' | ') + `\n\nTop 10 Assuntos globais (judicial): ${topAssuntosGlobais}`;
 }
 
 function buildTopSummary(data, n = 10) {
