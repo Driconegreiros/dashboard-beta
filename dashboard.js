@@ -260,9 +260,8 @@ function toggleTheme() {
  * Configura os limites do slider de anos com base nos dados reais
  */
 function setupYearsSlider() {
-    const years = Object.keys(rawData.global_by_year).map(Number).sort((a, b) => a - b);
-    const minYear = years[0];
-    const maxYear = years[years.length - 1];
+    const minYear = 2015;
+    const maxYear = 2026;
 
     const startEl = document.getElementById('year-start');
     const endEl = document.getElementById('year-end');
