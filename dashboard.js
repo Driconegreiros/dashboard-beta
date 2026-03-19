@@ -923,73 +923,13 @@ function toggleChat() {
 }
 
 function getChatContext() {
-    const yearStart = document.getElementById('year-start').value;
-    const yearEnd = document.getElementById('year-end').value;
-    const total = document.getElementById('kpi-total').innerText;
-    const lider = document.getElementById('kpi-lider').innerText;
-    const pico = document.getElementById('kpi-pico').innerText;
-    const classeKpi = document.getElementById('kpi-classe').innerText;
-    const kpiTitle2 = document.getElementById('kpi-title-2').innerText;
-    const classeLabel = document.getElementById('kpi-classe-label').innerText;
-
-    const topClasses = (classesChart?.data?.labels || []).slice(0, 5)
-        .map((l, i) => `${l}: ${(classesChart.data.datasets[0]._raw[i] || 0).toLocaleString('pt-BR')}`)
-        .join(' | ');
-    const topAssuntos = (assuntosChart?.data?.labels || []).slice(0, 5)
-        .map((l, i) => `${l}: ${(assuntosChart.data.datasets[0]._raw[i] || 0).toLocaleString('pt-BR')}`)
-        .join(' | ');
-
-    const dimItems = rawData?.dimensions?.[currentDimension]
-        ? Object.entries(rawData.dimensions[currentDimension].totals)
-            .sort((a, b) => b[1] - a[1])
-            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
-            .join(' | ')
-        : 'N/A';
-
-    // Resumo completo do dataset judicial
-    const judicialSummary = judicialData?.dimensions?.Especializada
-        ? Object.entries(judicialData.dimensions.Especializada.totals)
-            .sort((a, b) => b[1] - a[1])
-            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
-            .join(' | ')
-        : 'Não carregado';
-
-    // Resumo completo do dataset consultivo (Origem e Área)
-    const consultivoOrigemSummary = consultivoData?.dimensions?.Origem
-        ? Object.entries(consultivoData.dimensions.Origem.totals)
-            .sort((a, b) => b[1] - a[1])
-            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
-            .join(' | ')
-        : 'Não carregado';
-
-    const consultivoAreaSummary = consultivoData?.dimensions?.Área
-        ? Object.entries(consultivoData.dimensions.Área.totals)
-            .sort((a, b) => b[1] - a[1])
-            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
-            .join(' | ')
-        : 'Não carregado';
-
-    return `=== VISÃO ATUAL DO DASHBOARD ===
-Modo: ${currentMode === 'judicial' ? 'Judicial' : 'Consultivo'}
+    return `Modo: ${currentMode === 'judicial' ? 'Judicial' : 'Consultivo'}
 Dimensão ativa: ${currentDimension}
 Filtro selecionado: ${currentEspecializada}
-Período: ${yearStart} a ${yearEnd}
-Total de processos: ${total}
-${kpiTitle2}: ${lider}
-Pico de demandas: ${pico}
-${classeLabel}: ${classeKpi}
-Top 5 ${classeLabel === 'Classe Principal' ? 'Classes' : 'Áreas'}: ${topClasses || 'N/A'}
-Top 5 Assuntos: ${topAssuntos || 'N/A'}
-Itens da dimensão atual (${currentDimension}): ${dimItems}
-
-=== DADOS COMPLETOS - JUDICIAL (por Especializada, todos os anos) ===
-${judicialSummary}
-
-=== DADOS COMPLETOS - CONSULTIVO (por Órgão de Origem, todos os anos) ===
-${consultivoOrigemSummary}
-
-=== DADOS COMPLETOS - CONSULTIVO (por Área, todos os anos) ===
-${consultivoAreaSummary}`;
+Período: ${document.getElementById('year-start').value} a ${document.getElementById('year-end').value}
+Total exibido: ${document.getElementById('kpi-total').innerText}
+${document.getElementById('kpi-title-2').innerText}: ${document.getElementById('kpi-lider').innerText}
+Pico de demandas: ${document.getElementById('kpi-pico').innerText}`;
 }
 
 function appendChatMessage(role, text) {
