@@ -165,16 +165,15 @@ function updateChartTitles() {
     const h2Esp = document.getElementById('title-chart-especializadas');
     
     if (currentMode === 'judicial') {
-        h2Classes.innerText = "Top 10: Percentual por Classe (%)";
+        h2Classes.innerText = "Principais Classes";
         h2Esp.innerText = "Distribuição por Especializada";
     } else {
         // Modo Consultivo
         if (currentDimension === 'Origem') {
-            h2Classes.innerText = "Top 10: Percentual por Área (%)";
+            h2Classes.innerText = "Área";
             h2Esp.innerText = "Distribuição por Origem";
         } else {
-            // Requisito: quando for selecionado 'área', o Top 10 percentual deve ser por 'origem'
-            h2Classes.innerText = "Top 10: Percentual por Origem (%)";
+            h2Classes.innerText = "Órgão de Origem";
             h2Esp.innerText = "Distribuição por Área";
         }
     }
@@ -470,7 +469,7 @@ function createBarChart(canvasId, color, plugin) {
             indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
             layout: { padding: { right: 80, top: 10, bottom: 10 } },
             scales: { 
-                x: { grid: { color: gridColor }, max: 100 }, 
+                x: { grid: { color: gridColor }, max: 100, ticks: { display: false } },
                 y: { grid: { display: false }, ticks: { padding: 10 } } 
             },
             plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(2)}% (${ctx.dataset._raw[ctx.dataIndex].toLocaleString('pt-BR')})` } } }
@@ -526,7 +525,10 @@ function updateDashboard(esp) {
     });
 
     // Agregação para o gráfico Doughnut baseada nos anos selecionados
-    const currentDimItems = Object.keys(rawData.dimensions[currentDimension].totals);
+    // No modo consultivo, limita aos mesmos itens exibidos na sidebar (Top 20)
+    let allDimEntries = Object.entries(rawData.dimensions[currentDimension].totals).sort((a, b) => b[1] - a[1]);
+    if (currentMode === 'consultivo') allDimEntries = allDimEntries.slice(0, 20);
+    const currentDimItems = allDimEntries.map(([item]) => item);
     const doughnutData = currentDimItems.map(item => {
         let count = 0;
         validYears.forEach(y => {
@@ -551,14 +553,14 @@ function updateDashboard(esp) {
         especializadasChart.data.datasets[0].backgroundColor = originalColorsDoughnut;
     } else {
         document.getElementById('kpi-title-2').innerText = "Participação Histórica";
-        document.getElementById('kpi-lider').innerHTML = `${(totalOfEspAllTime / allTimeTotal * 100).toFixed(1)}% <span class="text-sm font-normal text-white/50">do total</span>`;
-        const espIdx = Object.keys(rawData.dimensions[currentDimension].totals).indexOf(esp);
+        document.getElementById('kpi-lider').innerHTML = `${(totalOfEspAllTime / allTimeTotal * 100).toFixed(1)}%`;
+        const espIdx = currentDimItems.indexOf(esp);
         especializadasChart.data.datasets[0].backgroundColor = originalColorsDoughnut.map((c, i) => i === espIdx ? c : hexToRgba(c, 0.15));
     }
 
     let maxVal = Math.max(...dataAnos, 0);
     let picoAno = maxVal > 0 ? validYears[dataAnos.indexOf(maxVal)] : "N/A";
-    document.getElementById('kpi-pico').innerHTML = `${picoAno} <span class="text-sm font-normal text-white/50">(${maxVal >= 1000 ? Math.round(maxVal / 1000) + 'k' : maxVal})</span>`;
+    document.getElementById('kpi-pico').innerHTML = `${picoAno} <span class="text-sm font-normal text-white/50">(${maxVal.toLocaleString('pt-BR')})</span>`;
     
     // Atualizar labels de KPI
     if (currentMode === 'judicial') {
@@ -878,4 +880,135 @@ async function loadGeoJsonData() {
 }
 
 // Iniciar quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', initDashboard);
+document.addEventListener('DOMContentLoaded', () => {
+    initDashboard();
+    initChat();
+});
+
+// ─── CHATBOT ────────────────────────────────────────────────────────────────
+
+let chatHistory = [];
+let chatIsOpen = false;
+
+function initChat() {
+    const toggle = document.getElementById('chat-toggle');
+    const closeBtn = document.getElementById('chat-close');
+    const sendBtn = document.getElementById('chat-send');
+    const input = document.getElementById('chat-input');
+
+    toggle.addEventListener('click', toggleChat);
+    closeBtn.addEventListener('click', toggleChat);
+    sendBtn.addEventListener('click', submitChatMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            submitChatMessage();
+        }
+    });
+}
+
+function toggleChat() {
+    chatIsOpen = !chatIsOpen;
+    const panel = document.getElementById('chat-panel');
+    const iconOpen = document.getElementById('chat-icon-open');
+    const iconClose = document.getElementById('chat-icon-close');
+
+    panel.classList.toggle('hidden', !chatIsOpen);
+    iconOpen.classList.toggle('hidden', chatIsOpen);
+    iconClose.classList.toggle('hidden', !chatIsOpen);
+
+    if (chatIsOpen) {
+        document.getElementById('chat-input').focus();
+    }
+}
+
+function getChatContext() {
+    const yearStart = document.getElementById('year-start').value;
+    const yearEnd = document.getElementById('year-end').value;
+    const total = document.getElementById('kpi-total').innerText;
+    const lider = document.getElementById('kpi-lider').innerText;
+    const pico = document.getElementById('kpi-pico').innerText;
+    const classeKpi = document.getElementById('kpi-classe').innerText;
+    const kpiTitle2 = document.getElementById('kpi-title-2').innerText;
+    const classeLabel = document.getElementById('kpi-classe-label').innerText;
+
+    const topClasses = (classesChart?.data?.labels || []).slice(0, 5)
+        .map((l, i) => `${l}: ${(classesChart.data.datasets[0]._raw[i] || 0).toLocaleString('pt-BR')}`)
+        .join(' | ');
+    const topAssuntos = (assuntosChart?.data?.labels || []).slice(0, 5)
+        .map((l, i) => `${l}: ${(assuntosChart.data.datasets[0]._raw[i] || 0).toLocaleString('pt-BR')}`)
+        .join(' | ');
+
+    return `Modo: ${currentMode === 'judicial' ? 'Judicial' : 'Consultivo'}
+Dimensão ativa: ${currentDimension}
+Filtro selecionado: ${currentEspecializada}
+Período: ${yearStart} a ${yearEnd}
+Total de processos: ${total}
+${kpiTitle2}: ${lider}
+Pico de demandas: ${pico}
+${classeLabel}: ${classeKpi}
+Top 5 ${classeLabel === 'Classe Principal' ? 'Classes' : 'Áreas'}: ${topClasses || 'N/A'}
+Top 5 Assuntos: ${topAssuntos || 'N/A'}`;
+}
+
+function appendChatMessage(role, text) {
+    const container = document.getElementById('chat-messages');
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex gap-2' + (role === 'user' ? ' justify-end' : '');
+
+    if (role === 'assistant') {
+        wrapper.innerHTML = `
+            <div class="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shrink-0 mt-0.5">
+                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9v-2h2v2zm0-4H9V7h2v2z"/></svg>
+            </div>
+            <div class="rounded-2xl rounded-tl-sm px-3 py-2 text-white/80 leading-relaxed max-w-[85%] whitespace-pre-wrap" style="background: rgba(255,255,255,0.07);">${escapeHtml(text)}</div>`;
+    } else {
+        wrapper.innerHTML = `
+            <div class="rounded-2xl rounded-tr-sm px-3 py-2 text-white leading-relaxed max-w-[85%] whitespace-pre-wrap" style="background: linear-gradient(135deg, rgba(168,85,247,0.5), rgba(236,72,153,0.5));">${escapeHtml(text)}</div>`;
+    }
+
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function submitChatMessage() {
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    sendBtn.disabled = true;
+    appendChatMessage('user', msg);
+    chatHistory.push({ role: 'user', content: msg });
+
+    document.getElementById('chat-typing').classList.remove('hidden');
+    document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: chatHistory, context: getChatContext() })
+        });
+
+        const data = await res.json();
+        document.getElementById('chat-typing').classList.add('hidden');
+
+        const reply = data.content || data.error || 'Erro ao processar sua mensagem.';
+        appendChatMessage('assistant', reply);
+        chatHistory.push({ role: 'assistant', content: reply });
+
+    } catch (e) {
+        document.getElementById('chat-typing').classList.add('hidden');
+        appendChatMessage('assistant', 'Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+        sendBtn.disabled = false;
+        input.focus();
+    }
+}
