@@ -22,6 +22,21 @@ function buildYearSummary(data) {
         .join(' | ');
 }
 
+function buildComarcaSummary(data) {
+    const comarcas = {};
+    const prefixRegex = /^(Comarca|Subseção Judiciária|Seção Judiciária) (de |do |da )?/i;
+    Object.values(data?.global_by_year || {}).forEach(y => {
+        Object.entries(y.comarcas || {}).forEach(([c, v]) => {
+            const name = c.replace(prefixRegex, '').trim();
+            comarcas[name] = (comarcas[name] || 0) + v;
+        });
+    });
+    return Object.entries(comarcas)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(' | ');
+}
+
 function buildTopSummary(data, n = 10) {
     const classes = {};
     const assuntos = {};
@@ -54,6 +69,9 @@ ${buildTopSummary(judicial).classes}
 
 === JUDICIAL — Top 10 Assuntos ===
 ${buildTopSummary(judicial).assuntos}
+
+=== JUDICIAL — Processos por Município/Comarca (interior do Amazonas) ===
+${buildComarcaSummary(judicial)}
 
 === CONSULTIVO — Órgãos de Origem (total histórico) ===
 ${buildDimensionSummary(consultivo, 'Origem')}
