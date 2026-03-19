@@ -11,19 +11,10 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Mensagens inválidas' });
     }
 
-    const systemPrompt = `Você é um assistente de análise de dados do Dashboard Judicial e Consultivo do Tribunal de Justiça do Amazonas (TJAM). Seu papel é ajudar os usuários a interpretar os dados exibidos no dashboard.
+    const systemPrompt = `Assistente do Dashboard TJAM (Tribunal de Justiça do Amazonas). Responda em português, de forma curta e direta, com base apenas nos dados abaixo. Use formatação brasileira para números. Se não houver dados suficientes, sugira ajustar os filtros.
 
-Estado atual do dashboard:
-${context || 'Contexto não disponível'}
-
-Diretrizes:
-- Responda sempre em português brasileiro
-- Seja objetivo e direto
-- Use os dados do contexto para embasar suas respostas
-- Quando citar números, use formatação brasileira (ex: 1.234 ou 1.234,5%)
-- Não invente dados que não estejam no contexto fornecido
-- Se perguntado sobre algo fora do contexto, informe que não possui essa informação no filtro atual
-- Você pode sugerir que o usuário ajuste os filtros do dashboard para obter diferentes perspectivas`;
+Dashboard:
+${context || 'Sem contexto'}`;
 
     try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -35,9 +26,9 @@ Diretrizes:
             },
             body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
-                max_tokens: 1024,
+                max_tokens: 400,
                 system: systemPrompt,
-                messages: messages.slice(-10)
+                messages: messages.slice(-6)
             })
         });
 
