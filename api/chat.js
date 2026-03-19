@@ -6,15 +6,26 @@ const path = require('path');
 // então os dados ficam em memória e o arquivo não é relido a cada chamada.
 
 function loadJson(filename) {
-    for (const base of [path.join(__dirname, '..'), process.cwd()]) {
-        const fullPath = path.join(base, filename);
+    const candidates = [
+        path.join(__dirname, '..', filename),   // /var/task/api/../data.json
+        path.join(__dirname, filename),          // /var/task/api/data.json
+        path.join(process.cwd(), filename),      // process.cwd()/data.json
+        path.join('/', 'var', 'task', filename), // /var/task/data.json (Vercel Lambda)
+    ];
+
+    console.log(`[chat] __dirname=${__dirname} | cwd=${process.cwd()}`);
+
+    for (const fullPath of candidates) {
         try {
             const data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-            console.log(`[chat] ${filename} carregado de: ${fullPath}`);
+            console.log(`[chat] OK: ${fullPath}`);
             return data;
-        } catch {}
+        } catch (e) {
+            console.log(`[chat] MISS (${e.code}): ${fullPath}`);
+        }
     }
-    console.error(`[chat] FALHA ao carregar ${filename}`);
+
+    console.error(`[chat] FALHA TOTAL ao carregar ${filename}`);
     return null;
 }
 
