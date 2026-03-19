@@ -939,6 +939,13 @@ function getChatContext() {
         .map((l, i) => `${l}: ${(assuntosChart.data.datasets[0]._raw[i] || 0).toLocaleString('pt-BR')}`)
         .join(' | ');
 
+    const dimItems = rawData && rawData.dimensions && rawData.dimensions[currentDimension]
+        ? Object.entries(rawData.dimensions[currentDimension].totals)
+            .sort((a, b) => b[1] - a[1])
+            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
+            .join(' | ')
+        : 'N/A';
+
     return `Modo: ${currentMode === 'judicial' ? 'Judicial' : 'Consultivo'}
 Dimensão ativa: ${currentDimension}
 Filtro selecionado: ${currentEspecializada}
@@ -948,7 +955,8 @@ ${kpiTitle2}: ${lider}
 Pico de demandas: ${pico}
 ${classeLabel}: ${classeKpi}
 Top 5 ${classeLabel === 'Classe Principal' ? 'Classes' : 'Áreas'}: ${topClasses || 'N/A'}
-Top 5 Assuntos: ${topAssuntos || 'N/A'}`;
+Top 5 Assuntos: ${topAssuntos || 'N/A'}
+Todos os itens da dimensão (${currentDimension}): ${dimItems}`;
 }
 
 function appendChatMessage(role, text) {
