@@ -7,9 +7,14 @@ const path = require('path');
 
 function loadJson(filename) {
     for (const base of [path.join(__dirname, '..'), process.cwd()]) {
-        try { return JSON.parse(fs.readFileSync(path.join(base, filename), 'utf8')); } catch {}
+        const fullPath = path.join(base, filename);
+        try {
+            const data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+            console.log(`[chat] ${filename} carregado de: ${fullPath}`);
+            return data;
+        } catch {}
     }
-    console.error(`[chat] Não foi possível carregar ${filename}`);
+    console.error(`[chat] FALHA ao carregar ${filename}`);
     return null;
 }
 
