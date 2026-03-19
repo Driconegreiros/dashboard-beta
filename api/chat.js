@@ -1,5 +1,8 @@
 // Cache — carregado na primeira requisição e reutilizado nas seguintes
+// Incrementar VERSION força novo cache no próximo cold start
+const CACHE_VERSION = '3';
 let DATA_CONTEXT = null;
+let DATA_CONTEXT_VERSION = null;
 
 function normKey(k) {
     return String(k).replace(/\\/g, '/');
@@ -146,8 +149,9 @@ module.exports = async function handler(req, res) {
     const protocol = host?.includes('localhost') ? 'http' : 'https';
     const baseUrl = `${protocol}://${host}`;
 
-    if (!DATA_CONTEXT) {
+    if (!DATA_CONTEXT || DATA_CONTEXT_VERSION !== CACHE_VERSION) {
         DATA_CONTEXT = await buildDataContext(baseUrl);
+        DATA_CONTEXT_VERSION = CACHE_VERSION;
     }
 
     const systemPrompt = `Você é um assistente de análise de dados de um dashboard jurídico com acesso TOTAL e IRRESTRITO a todos os dados, independente da aba ou filtro ativo no dashboard.
