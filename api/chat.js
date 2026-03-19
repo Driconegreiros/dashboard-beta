@@ -1,33 +1,5 @@
-const fs = require('fs');
-const path = require('path');
-
-// ─── Carregamento e processamento na inicialização do módulo ─────────────────
-// Em funções "quentes" do Vercel, o módulo é reutilizado entre requisições,
-// então os dados ficam em memória e o arquivo não é relido a cada chamada.
-
-function loadJson(filename) {
-    const candidates = [
-        path.join(__dirname, '..', filename),   // /var/task/api/../data.json
-        path.join(__dirname, filename),          // /var/task/api/data.json
-        path.join(process.cwd(), filename),      // process.cwd()/data.json
-        path.join('/', 'var', 'task', filename), // /var/task/data.json (Vercel Lambda)
-    ];
-
-    console.log(`[chat] __dirname=${__dirname} | cwd=${process.cwd()}`);
-
-    for (const fullPath of candidates) {
-        try {
-            const data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-            console.log(`[chat] OK: ${fullPath}`);
-            return data;
-        } catch (e) {
-            console.log(`[chat] MISS (${e.code}): ${fullPath}`);
-        }
-    }
-
-    console.error(`[chat] FALHA TOTAL ao carregar ${filename}`);
-    return null;
-}
+// Cache — carregado na primeira requisição e reutilizado nas seguintes
+let DATA_CONTEXT = null;
 
 function normKey(k) {
     return String(k).replace(/\\/g, '/');
@@ -62,12 +34,11 @@ function buildTopSummary(data, n = 10) {
     return { classes: top(classes), assuntos: top(assuntos) };
 }
 
-// Cache — carregado na primeira requisição (cold start) e reutilizado nas seguintes
-let DATA_CONTEXT = null;
-
-function buildDataContext() {
-    const judicial = loadJson('data.json');
-    const consultivo = loadJson('data_consultivo.json');
+async function buildDataContext(baseUrl) {
+    const [judicial, consultivo] = await Promise.all([
+        fetch(`${baseUrl}/data.json`).then(r => r.json()).catch(() => null),
+        fetch(`${baseUrl}/data_consultivo.json`).then(r => r.json()).catch(() => null),
+    ]);
 
     console.log('[chat] judicial ok:', !!judicial, '| consultivo ok:', !!consultivo);
 
@@ -116,7 +87,14 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Mensagens inválidas' });
     }
 
-    if (!DATA_CONTEXT) DATA_CONTEXT = buildDataContext();
+    // Monta a base URL a partir do host da requisição
+    const host = req.headers.host;
+    const protocol = host?.includes('localhost') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
+
+    if (!DATA_CONTEXT) {
+        DATA_CONTEXT = await buildDataContext(baseUrl);
+    }
 
     const systemPrompt = `Você é um assistente de análise de dados de um dashboard jurídico com acesso TOTAL e IRRESTRITO a todos os dados, independente da aba ou filtro ativo no dashboard.
 
