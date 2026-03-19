@@ -332,9 +332,19 @@ function initCharts() {
                 y: { grid: { color: gridColor }, beginAtZero: true }
             },
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                datalabels: { display: false },
+                tooltip: {
+                    mode: 'nearest',
+                    intersect: true,
+                    callbacks: {
+                        title: () => '',
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR')}`
+                    }
+                }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 
     // Plugin para labels nas barras
@@ -394,7 +404,7 @@ function initCharts() {
             maintainAspectRatio: false,
             cutout: '50%',
             plugins: {
-                legend: { display: false },
+                legend: { position: 'right', labels: { padding: 20, usePointStyle: true } },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -406,21 +416,9 @@ function initCharts() {
                         }
                     }
                 },
-                datalabels: {
-                    color: '#fff',
-                    font: { size: 11, weight: 'bold' },
-                    textShadowBlur: 4,
-                    textShadowColor: 'rgba(0,0,0,0.6)',
-                    formatter: function(value, ctx) {
-                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                        const pct = (value / total) * 100;
-                        if (pct < 4) return ''; // oculta fatias muito pequenas
-                        return ctx.chart.data.labels[ctx.dataIndex];
-                    }
-                }
+                datalabels: { display: false }
             }
-        },
-        plugins: [ChartDataLabels]
+        }
     });
 
     // 5. Heatmap Amazonas (ECharts)
@@ -622,7 +620,14 @@ function updateDashboard(esp) {
             usePointStyle: true,
             boxWidth: 10
         };
-        evolucaoChart.options.plugins.tooltip = { enabled: false };
+        evolucaoChart.options.plugins.tooltip = {
+            mode: 'nearest',
+            intersect: true,
+            callbacks: {
+                title: () => '',
+                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR')}`
+            }
+        };
     } else {
         // Single-series: só a especializada selecionada
         const ctxEv = document.getElementById('chartEvolucao').getContext('2d');
