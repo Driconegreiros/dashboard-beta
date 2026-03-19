@@ -389,12 +389,12 @@ function initCharts() {
                 borderWidth: 0 
             }] 
         },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            cutout: '50%', // Preenche mais a circunferência reduzindo o buraco central
-            plugins: { 
-                legend: { position: 'right', labels: { padding: 20, usePointStyle: true } },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '50%',
+            plugins: {
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -405,9 +405,22 @@ function initCharts() {
                             return `${label}: ${percentage} (${value.toLocaleString('pt-BR')})`;
                         }
                     }
+                },
+                datalabels: {
+                    color: '#fff',
+                    font: { size: 11, weight: 'bold' },
+                    textShadowBlur: 4,
+                    textShadowColor: 'rgba(0,0,0,0.6)',
+                    formatter: function(value, ctx) {
+                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                        const pct = (value / total) * 100;
+                        if (pct < 4) return ''; // oculta fatias muito pequenas
+                        return ctx.chart.data.labels[ctx.dataIndex];
+                    }
                 }
-            } 
-        }
+            }
+        },
+        plugins: [ChartDataLabels]
     });
 
     // 5. Heatmap Amazonas (ECharts)
