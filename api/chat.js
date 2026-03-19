@@ -1,3 +1,52 @@
+const fs = require('fs');
+const path = require('path');
+
+function loadJson(filename) {
+    try {
+        return JSON.parse(fs.readFileSync(path.join(process.cwd(), filename), 'utf8'));
+    } catch {
+        return null;
+    }
+}
+
+function summarizeDimension(data, dimension) {
+    const dim = data?.dimensions?.[dimension];
+    if (!dim) return 'Não disponível';
+    return Object.entries(dim.totals)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => `${k}: ${v.toLocaleString('pt-BR')}`)
+        .join(' | ');
+}
+
+function summarizeYears(data) {
+    if (!data?.global_by_year) return 'Não disponível';
+    return Object.entries(data.global_by_year)
+        .sort((a, b) => a[0] - b[0])
+        .map(([y, d]) => `${y}: ${d.total}`)
+        .join(' | ');
+}
+
+function topEntries(obj, n = 10) {
+    return Object.entries(obj || {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, n)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(' | ');
+}
+
+function summarizeTopClassesAssuntos(data) {
+    const allClasses = {};
+    const allAssuntos = {};
+    Object.values(data?.global_by_year || {}).forEach(y => {
+        Object.entries(y.classes || {}).forEach(([k, v]) => allClasses[k] = (allClasses[k] || 0) + v);
+        Object.entries(y.assuntos || {}).forEach(([k, v]) => allAssuntos[k] = (allAssuntos[k] || 0) + v);
+    });
+    return {
+        classes: topEntries(allClasses),
+        assuntos: topEntries(allAssuntos)
+    };
+}
+
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -11,10 +60,43 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Mensagens inválidas' });
     }
 
-    const systemPrompt = `Você é um assistente de análise de dados de um dashboard judicial. Responda em português, de forma curta e direta. Regras: nunca se apresente, nunca liste dados espontaneamente, responda apenas o que foi perguntado, use os dados abaixo somente quando a resposta exigir. Use formatação brasileira para números.
+    const judicial = loadJson('data.json');
+    const consultivo = loadJson('data_consultivo.json');
 
-Dashboard:
-${context || 'Sem contexto'}`;
+    const jTop = judicial ? summarizeTopClassesAssuntos(judicial) : { classes: 'N/A', assuntos: 'N/A' };
+    const cTop = consultivo ? summarizeTopClassesAssuntos(consultivo) : { classes: 'N/A', assuntos: 'N/A' };
+
+    const systemPrompt = `Você é um assistente de análise de dados de um dashboard judicial. Responda em português, de forma curta e direta. Nunca se apresente. Use os dados abaixo para embasar respostas. Use formatação brasileira para números. Se não tiver a informação, diga que não está disponível nos dados.
+
+=== VISÃO ATUAL (filtro ativo) ===
+${context || 'Sem contexto'}
+
+=== JUDICIAL — Totais por Especializada ===
+${summarizeDimension(judicial, 'Especializada')}
+
+=== JUDICIAL — Evolução anual ===
+${summarizeYears(judicial)}
+
+=== JUDICIAL — Top 10 Classes ===
+${jTop.classes}
+
+=== JUDICIAL — Top 10 Assuntos ===
+${jTop.assuntos}
+
+=== CONSULTIVO — Totais por Órgão de Origem ===
+${summarizeDimension(consultivo, 'Origem')}
+
+=== CONSULTIVO — Totais por Área ===
+${summarizeDimension(consultivo, 'Área')}
+
+=== CONSULTIVO — Evolução anual ===
+${summarizeYears(consultivo)}
+
+=== CONSULTIVO — Top 10 Classes ===
+${cTop.classes}
+
+=== CONSULTIVO — Top 10 Assuntos ===
+${cTop.assuntos}`;
 
     try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
