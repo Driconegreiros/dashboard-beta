@@ -939,14 +939,38 @@ function getChatContext() {
         .map((l, i) => `${l}: ${(assuntosChart.data.datasets[0]._raw[i] || 0).toLocaleString('pt-BR')}`)
         .join(' | ');
 
-    const dimItems = rawData && rawData.dimensions && rawData.dimensions[currentDimension]
+    const dimItems = rawData?.dimensions?.[currentDimension]
         ? Object.entries(rawData.dimensions[currentDimension].totals)
             .sort((a, b) => b[1] - a[1])
             .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
             .join(' | ')
         : 'N/A';
 
-    return `Modo: ${currentMode === 'judicial' ? 'Judicial' : 'Consultivo'}
+    // Resumo completo do dataset judicial
+    const judicialSummary = judicialData?.dimensions?.Especializada
+        ? Object.entries(judicialData.dimensions.Especializada.totals)
+            .sort((a, b) => b[1] - a[1])
+            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
+            .join(' | ')
+        : 'Não carregado';
+
+    // Resumo completo do dataset consultivo (Origem e Área)
+    const consultivoOrigemSummary = consultivoData?.dimensions?.Origem
+        ? Object.entries(consultivoData.dimensions.Origem.totals)
+            .sort((a, b) => b[1] - a[1])
+            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
+            .join(' | ')
+        : 'Não carregado';
+
+    const consultivoAreaSummary = consultivoData?.dimensions?.Área
+        ? Object.entries(consultivoData.dimensions.Área.totals)
+            .sort((a, b) => b[1] - a[1])
+            .map(([item, count]) => `${item}: ${count.toLocaleString('pt-BR')}`)
+            .join(' | ')
+        : 'Não carregado';
+
+    return `=== VISÃO ATUAL DO DASHBOARD ===
+Modo: ${currentMode === 'judicial' ? 'Judicial' : 'Consultivo'}
 Dimensão ativa: ${currentDimension}
 Filtro selecionado: ${currentEspecializada}
 Período: ${yearStart} a ${yearEnd}
@@ -956,7 +980,16 @@ Pico de demandas: ${pico}
 ${classeLabel}: ${classeKpi}
 Top 5 ${classeLabel === 'Classe Principal' ? 'Classes' : 'Áreas'}: ${topClasses || 'N/A'}
 Top 5 Assuntos: ${topAssuntos || 'N/A'}
-Todos os itens da dimensão (${currentDimension}): ${dimItems}`;
+Itens da dimensão atual (${currentDimension}): ${dimItems}
+
+=== DADOS COMPLETOS - JUDICIAL (por Especializada, todos os anos) ===
+${judicialSummary}
+
+=== DADOS COMPLETOS - CONSULTIVO (por Órgão de Origem, todos os anos) ===
+${consultivoOrigemSummary}
+
+=== DADOS COMPLETOS - CONSULTIVO (por Área, todos os anos) ===
+${consultivoAreaSummary}`;
 }
 
 function appendChatMessage(role, text) {
